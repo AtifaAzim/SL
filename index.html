@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SL Transport Departures - Ambassaderna (1411)</title>
+    <!-- Include the modular scripts -->
+    <script src="clock.js"></script>
+    <script src="config.js"></script>
+    <script src="weather.js"></script>
+    <script src="ticker.js"></script>
+    <script src="departures.js"></script>
+    <style>
+        /* Base styles */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+            transition: all 0.5s ease;
+        }
+        
+        /* Dark mode styles */
+        body.dark-mode {
+            background-color: #222;
+            color: #f5f5f5;
+        }
+        
+        body.dark-mode .departure-card {
+            background-color: #333;
+            border-left-color: #0077cc;
+        }
+        
+        body.dark-mode .config-modal-content {
+            background-color: #333;
+            color: #f5f5f5;
+        }
+        
+        body.dark-mode .config-modal-body {
+            background-color: #333;
+        }
+        
+        body.dark-mode .config-modal-footer {
+            background-color: #444;
+        }
+        
+        body.dark-mode #config-cancel-button {
+            background-color: #555;
+            color: #f5f5f5;
+        }
+        
+        body.dark-mode .time,
+        body.dark-mode .destination {
+            color: #f5f5f5;
+        }
+        
+        body.dark-mode .direction,
+        body.dark-mode .details,
+        body.dark-mode .countdown,
+        body.dark-mode .last-updated {
+            color: #aaa;
+        }
+        
+        body.dark-mode h2 {
+            color: #0077cc;
+        }
+        
+        body.dark-mode .sun-times {
+            color: #aaa;
+        }
+        
+        body.dark-mode .clock-container {
+            background-color: #0077cc;
+        }
+        
+        body.dark-mode .line-number {
+            background-color: #0077cc;
+        }
+        
+        /* Normal orientation */
+        body.normal {
+            max-width: 800px;
+        }
+        body.normal .departure-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+        
+        /* Landscape orientation */
+        body.landscape {
+            max-width: 100%;
+            padding: 20px 40px;
+        }
+        
+        body.landscape .departure-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        body.landscape .clock-container {
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        /* Vertical orientation (90 degrees rotated) */
+        body.vertical {
+            max-width: 100%;
+            height: 100vh;
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        body.vertical #content-wrapper {
+            transform: rotate(90deg);
+            transform-origin: center center;
+            position: absolute;
+            width: 100vh; /* Use viewport height for width */
+            height: 100vw; /* Use viewport width for height */
+            max-width: 800px; /* Limit width for better readability */
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            background-color: transparent; /* Remove background color */
+            left: 50%;
+            top: 50%;
+            margin-left: -50vh; /* Half of width */
+            margin-top: -50vw; /* Half of height */
+        }
+        
+        body.vertical .config-button {
+            transform: rotate(-90deg);
+            position: fixed;
+            right: 10px;
+            top: 10px;
+            z-index: 1000;
+        }
+        
+        body.vertical .departure-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+        
+        /* Upside down orientation (180 degrees rotated) */
+        body.upsidedown {
+            max-width: 100%;
+            height: 100vh;
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        body.upsidedown #content-wrapper {
+            transform: rotate(180deg);
+            transform-origin: center center;
+            position: absolute;
+            width: 100%;
+            max-width: 800px;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            background-color: transparent; /* Remove background color */
+            left: 50%;
+            top: 50%;
+            margin-left: -400px; /* Half of max-width */
+            margin-top: -50vh; /* Half of viewport height */
+        }
+        
+        body.upsidedown .config-button {
+            transform: rotate(-180deg);
+            position: fixed;
+            right: 10px;
+            top: 10px;
+            z-index: 1000;
+        }
+        
+        body.upsidedown .departure-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+        
+        /* Vertical reverse orientation (270 degrees rotated) */
+        body.vertical-reverse {
+            max-width: 100%;
+            height: 100vh;
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        body.vertical-reverse #content-wrapper {
+            transform: rotate(270deg);
+            transform-origin: center center;
+            position: absolute;
+            width: 100vh; /* Use viewport height for width */
+            height: 100vw; /* Use viewport width for height */
+            max-width: none; /* Remove max-width limitation */
+            padding: 20px;
+            box-sizing: border-box;
+            overflow: visible; /* Show all content */
+            background-color: transparent; /* Remove background color to show background image */
+            left: 50%;
+            top: 50%;
+            margin-left: -50vh; /* Half of width */
+            margin-top: -50vw; /* Half of height */
+        }
+        
+        body.vertical-reverse .config-button {
+            transform: rotate(-270deg);
+            position: fixed;
+            right: 10px;
+            top: 10px;
+            z-index: 1000;
+        }
+        
+        body.vertical-reverse .departure-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            width: 100%; /* Ensure full width */
+        }
+        
+        /* Mode indicators - using a class instead of pseudo-element */
+        .mode-indicator {
+            font-size: 0.7em;
+            color: #666;
+            font-weight: normal;
+            display: inline;
+        }
+        /* Clock styles */
+        .clock-container {
+            background-color: #0061a1;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Configuration button styles */
+        .config-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background-color: #0061a1;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            z-index: 100;
+            transition: transform 0.3s ease;
+        }
+        
+        .config-button:hover {
+            transform: rotate(30deg);
+        }
+        
+        /* Configuration modal styles */
+        .config-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .config-modal-content {
+            background-color: white;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        .config-modal-header {
+            background-color: #0061a1;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .config-modal-header h2 {
+            margin: 0;
+            font-size: 1.5em;
+        }
+        
+        .config-modal-close {
+            font-size: 1.8em;
+            cursor: pointer;
+        }
+        
+        .config-modal-body {
+            padding: 20px;
+        }
+        
+        .config-option {
+            margin-bottom: 15px;
+        }
+        
+        .config-option label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .config-option select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+        
+        .config-modal-footer {
+            padding: 15px 20px;
+            background-color: #f5f5f5;
+            text-align: right;
+        }
+        
+        .config-modal-footer button {
+            padding: 8px 15px;
+            margin-left: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        
+        #config-save-button {
+            background-color: #0061a1;
+            color: white;
+        }
+        
+        #config-cancel-button {
+            background-color: #ddd;
+        }
+        .clock-time {
+            font-size: 1.6em;
+            font-weight: bold;
+            white-space: nowrap;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .clock-date {
+            font-size: 1.2em;
+            font-weight: normal;
+            margin-left: 10px;
+            display: inline-block;
+        }
+        h2 {
+            color: #0061a1;
+            text-align: center;
+        }
+        .status {
+            text-align: center;
+            margin-bottom: 20px;
+            font-style: italic;
+            display: none; /* Hide the status message to avoid layout disruptions */
+        }
+        .departure-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px; /* Increased from 10px for more consistent spacing */
+            margin-bottom: 20px;
+        }
+        .departure-card {
+            background-color: white; /* Changed from #333 to white for light mode */
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 10px; /* Restored margin for spacing between cards */
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+        }
+        
+        /* Condensed departure card for next hour */
+        .departure-card.condensed {
+            padding: 6px 8px;
+        }
+        
+        .departure-card.condensed .details {
+            display: none;
+        }
+        
+        .departure-card.condensed .direction {
+            font-size: 0.85em;
+        }
+        
+        .departure-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+        .line-number {
+            background-color: #0061a1;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 1.8em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-right: 10px;
+        }
+        
+        .transport-icon {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+        
+        .line-destination {
+            font-size: 0.65em;
+            font-weight: normal;
+            margin-left: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 120px; /* Reduced from 160px to prevent pushing arrival time */
+            display: inline-block;
+            vertical-align: middle;
+        }
+        
+        /* Styles for side-by-side line cards */
+        .line-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px; /* Restored margin for spacing between line containers */
+        }
+        
+        .direction-card {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .time-row {
+            margin-bottom: 5px;
+            text-align: right;
+        }
+        
+        .time-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .time {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+        .arrival-time {
+            font-size: 1.3em;
+        }
+        .countdown {
+            font-size: 1.1em;
+            color: #666;
+        }
+        .destination {
+            font-weight: bold;
+            font-size: 1.4em;
+            margin: 10px 0;
+        }
+        .direction {
+            color: #666;
+        }
+        .details {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        /* Weather widget styles */
+        .weather-container {
+            margin: 20px 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        body.dark-mode .weather-container {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Custom weather display */
+        #custom-weather {
+            padding: 12px;
+            background-color: rgba(30, 36, 50, 0.8); /* Semi-transparent background */
+            color: white;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        /* Ensure weather widget is visible in vertical-reverse mode */
+        body.vertical-reverse #custom-weather {
+            width: auto;
+            max-width: none;
+        }
+        
+        #custom-weather .current-weather {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        
+        #custom-weather .location-info {
+            display: flex;
+            align-items: center;
+            margin-right: 15px;
+        }
+        
+        #custom-weather h3 {
+            margin: 0;
+            margin-right: 8px;
+            font-size: 1.1em;
+        }
+        
+        #custom-weather .weather-icon {
+            display: flex;
+            align-items: center;
+            margin-right: 10px;
+        }
+        
+        #custom-weather .weather-icon img {
+            width: 48px;
+            height: 48px;
+            margin-right: 5px;
+        }
+        
+        #custom-weather .temperature {
+            font-size: 1.8em;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        
+        #custom-weather .sun-times {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.85em;
+            color: #aaa;
+        }
+        
+        /* Hourly forecast styles */
+        #custom-weather .forecast {
+            display: flex;
+            justify-content: center;
+            overflow-x: auto;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+            scrollbar-width: thin;
+            scrollbar-color: #4fc3f7 #1e2432;
+        }
+        
+        #custom-weather .forecast::-webkit-scrollbar {
+            height: 6px;
+        }
+        
+        #custom-weather .forecast::-webkit-scrollbar-track {
+            background: #1e2432;
+        }
+        
+        #custom-weather .forecast::-webkit-scrollbar-thumb {
+            background-color: #4fc3f7;
+            border-radius: 6px;
+        }
+        
+        #custom-weather .forecast-hour {
+            text-align: center;
+            min-width: 60px;
+            margin-right: 10px;
+            flex-shrink: 0;
+            background-color: rgba(30, 40, 60, 0.5);
+            border: 1px solid #4fc3f7;
+            border-radius: 6px;
+            padding: 8px 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            height: 120px;
+        }
+        
+        #custom-weather .forecast-hour:last-child {
+            margin-right: 0;
+        }
+        
+        #custom-weather .forecast-hour .time {
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            font-weight: bold;
+            color: white;
+            display: block;
+        }
+        
+        #custom-weather .forecast-hour .icon {
+            margin: 5px 0;
+        }
+        
+        #custom-weather .forecast-hour .temp {
+            font-weight: bold;
+        }
+        
+        #custom-weather .attribution {
+            margin-top: 10px;
+            font-size: 0.7em;
+            text-align: right;
+        }
+        
+        #custom-weather .attribution a {
+            color: #4fc3f7;
+            text-decoration: none;
+        }
+        
+        /* Sun times display in config */
+        .sun-times {
+            margin-top: 5px;
+            color: #666;
+        }
+        
+        /* Background image settings */
+        #background-image-url {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1em;
+            margin-bottom: 10px;
+        }
+        
+        .background-preview {
+            width: 100%;
+            height: 120px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 5px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f5f5f5;
+        }
+        
+        .background-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        
+        .background-preview .no-image {
+            color: #999;
+            font-style: italic;
+        }
+        
+        #background-opacity {
+            width: 100%;
+            margin-top: 5px;
+        }
+        
+        #opacity-value {
+            font-weight: normal;
+            color: #0077cc;
+        }
+        
+        .last-updated {
+            text-align: center;
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 20px;
+        }
+        /* Site header styles */
+        .site-header {
+            margin-bottom: 10px; /* Reduced to create more consistent spacing */
+            position: relative;
+        }
+        
+        /* Site container styles */
+        .site-container {
+            margin-bottom: 10px; /* Reduced to match other spacing */
+        }
+        
+        .site-name {
+            display: inline-block;
+            background-color: white;
+            color: #0061a1;
+            font-weight: bold;
+            padding: 5px 15px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 1;
+        }
+        
+        .error {
+            color: red;
+            text-align: center;
+            padding: 20px;
+            background-color: #ffeeee;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Content wrapper for vertical orientation -->
+    <div id="content-wrapper">
+        <!-- Clock element -->
+        <div id="clock"></div>
+        
+        <!-- Site ID header removed as requested -->
+    
+        <div class="status" id="status">Loading departures...</div>
+        
+        <div class="departure-container" id="departures">
+            <!-- Departures will be inserted here by JavaScript -->
+        </div>
+        
+        <!-- Weather widget -->
+        <div class="weather-container">
+            <!-- Custom weather display with hourly forecast -->
+            <div id="custom-weather">
+                <div class="current-weather">
+                    <div class="location-info">
+                        <h3>Stockholm</h3>
+                        <div class="weather-icon">
+                            <img src="https://cdn.weatherapi.com/weather/64x64/day/113.png" alt="Clear" />
+                            <div>Clear</div>
+                        </div>
+                    </div>
+                    <div class="temperature">7.1 °C</div>
+                </div>
+                <div class="forecast">
+                    <div class="forecast-hour">
+                        <div class="time">Now</div>
+                        <div class="icon">
+                            <img src="https://cdn.weatherapi.com/weather/64x64/day/113.png" alt="Clear" width="40" />
+                        </div>
+                        <div class="temp">7.1 °C</div>
+                    </div>
+                    <div class="forecast-hour">
+                        <div class="time">19:00</div>
+                        <div class="icon">
+                            <img src="https://cdn.weatherapi.com/weather/64x64/night/113.png" alt="Clear" width="40" />
+                        </div>
+                        <div class="temp">6.8 °C</div>
+                    </div>
+                    <div class="forecast-hour">
+                        <div class="time">20:00</div>
+                        <div class="icon">
+                            <img src="https://cdn.weatherapi.com/weather/64x64/night/113.png" alt="Clear" width="40" />
+                        </div>
+                        <div class="temp">6.5 °C</div>
+                    </div>
+                    <div class="forecast-hour">
+                        <div class="time">21:00</div>
+                        <div class="icon">
+                            <img src="https://cdn.weatherapi.com/weather/64x64/night/116.png" alt="Partly cloudy" width="40" />
+                        </div>
+                        <div class="temp">6.2 °C</div>
+                    </div>
+                    <div class="forecast-hour">
+                        <div class="time">22:00</div>
+                        <div class="icon">
+                            <img src="https://cdn.weatherapi.com/weather/64x64/night/116.png" alt="Partly cloudy" width="40" />
+                        </div>
+                        <div class="temp">6.0 °C</div>
+                    </div>
+                    <div class="forecast-hour">
+                        <div class="time">23:00</div>
+                        <div class="icon">
+                            <img src="https://cdn.weatherapi.com/weather/64x64/night/116.png" alt="Partly cloudy" width="40" />
+                        </div>
+                        <div class="temp">5.8 °C</div>
+                    </div>
+                    <div class="forecast-hour">
+                        <div class="time">00:00</div>
+                        <div class="icon">
+                            <img src="https://cdn.weatherapi.com/weather/64x64/night/116.png" alt="Partly cloudy" width="40" />
+                        </div>
+                        <div class="temp">5.5 °C</div>
+                    </div>
+                </div>
+                <div class="sun-times">
+                    Sunrise: 06:45 AM | Sunset: 05:32 PM
+                </div>
+            </div>
+        </div>
+        
+        <div class="last-updated" id="last-updated"></div>
+    </div> <!-- End of content-wrapper -->
+    
+    <script>
+        // Function to ensure content wrapper exists
+        function ensureContentWrapper() {
+            if (!document.getElementById('content-wrapper')) {
+                console.log('Creating content wrapper');
+                const wrapper = document.createElement('div');
+                wrapper.id = 'content-wrapper';
+                
+                // Move all body children to the wrapper except config elements
+                const configElements = ['config-button', 'config-modal', 'background-overlay'];
+                
+                // Create an array of nodes to move (can't modify while iterating)
+                const nodesToMove = [];
+                for (let i = 0; i < document.body.children.length; i++) {
+                    const child = document.body.children[i];
+                    if (!configElements.includes(child.id) && child.id !== 'content-wrapper') {
+                        nodesToMove.push(child);
+                    }
+                }
+                
+                // Move the nodes to the wrapper
+                nodesToMove.forEach(node => {
+                    wrapper.appendChild(node);
+                });
+                
+                // Add the wrapper back to the body
+                document.body.appendChild(wrapper);
+            }
+        }
+        
+        // Initialize components when the DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM fully loaded');
+            
+            // Create a new clock instance
+            const clock = new Clock({
+                elementId: 'clock',
+                timezone: 'Europe/Stockholm'
+            });
+            
+            // Create a weather manager instance
+            window.weatherManager = new WeatherManager({
+                latitude: 59.3293, // Stockholm latitude
+                longitude: 18.0686 // Stockholm longitude
+            });
+            
+            // Listen for dark mode changes
+            document.addEventListener('darkModeChanged', function(event) {
+                console.log('Dark mode changed:', event.detail);
+                document.body.classList.toggle('dark-mode', event.detail.isDarkMode);
+            });
+            
+            // Create a new config manager instance and make it globally accessible
+            try {
+                console.log('Creating ConfigManager...');
+                
+                // Add updateBackgroundPreview function to ConfigManager prototype
+                ConfigManager.prototype.updateBackgroundPreview = function() {
+                    const preview = document.getElementById('background-preview');
+                    const imageUrl = document.getElementById('background-image-url').value;
+                    
+                    if (preview) {
+                        if (imageUrl && imageUrl.trim() !== '') {
+                            preview.innerHTML = `<img src="${imageUrl}" alt="Background preview">`;
+                        } else {
+                            preview.innerHTML = '<div class="no-image">No image selected</div>';
+                        }
+                    }
+                };
+                
+                window.configManager = new ConfigManager({
+                    defaultOrientation: 'normal',
+                    defaultDarkMode: 'auto'
+                });
+                console.log('ConfigManager initialized successfully');
+                
+                // Manually create config button if it doesn't exist
+                if (!document.getElementById('config-button')) {
+                    console.log('Config button not found, creating manually');
+                    const buttonContainer = document.createElement('div');
+                    buttonContainer.id = 'config-button';
+                    buttonContainer.className = 'config-button';
+                    buttonContainer.title = 'Settings';
+                    
+                    // Create gear icon using SVG
+                    buttonContainer.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                            <path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.65.07-.97 0-.32-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66z" fill="#fff"/>
+                        </svg>
+                    `;
+                    
+                    // Add click event listener
+                    buttonContainer.addEventListener('click', () => {
+                        console.log('Config button clicked');
+                        if (window.configManager) {
+                            window.configManager.toggleConfigModal();
+                        } else {
+                            console.error('ConfigManager not available');
+                        }
+                    });
+                    
+                    // Add to document
+                    document.body.appendChild(buttonContainer);
+                    console.log('Config button created manually');
+                }
+            } catch (error) {
+                console.error('Error initializing ConfigManager:', error);
+            }
+            
+            // Listen for configuration changes
+            document.addEventListener('configChanged', function(event) {
+                console.log('Configuration changed:', event.detail.config);
+                
+                // Ensure content wrapper exists when changing to rotated modes
+                if (['vertical', 'upsidedown', 'vertical-reverse'].includes(event.detail.config.orientation)) {
+                    ensureContentWrapper();
+                    console.log(`${event.detail.config.orientation} mode applied`);
+                }
+            });
+            
+            // Create a ticker manager instance
+            try {
+                console.log('Creating TickerManager...');
+                window.tickerManager = new TickerManager({
+                    proxyUrl: 'http://localhost:3002/api/rss'
+                });
+                console.log('TickerManager initialized successfully');
+            } catch (error) {
+                console.error('Error initializing TickerManager:', error);
+            }
+            
+            // Ensure content wrapper exists initially
+            ensureContentWrapper();
+        });
+    </script>
